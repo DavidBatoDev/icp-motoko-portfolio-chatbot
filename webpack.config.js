@@ -75,6 +75,15 @@ module.exports = {
         },
       ],
     }),
+    new webpack.DefinePlugin({
+      // Safe, non-secret IC vars
+      'process.env.CANISTER_ID_BACKEND': JSON.stringify(process.env.CANISTER_ID_BACKEND || ''),
+      'process.env.DFX_NETWORK':        JSON.stringify(process.env.DFX_NETWORK        || ''),
+      // Client-side only, *non-secret* API keys
+      'process.env.GEMINI_API_KEY':     JSON.stringify(process.env.GEMINI_API_KEY     || ''),
+      'process.env.HF_API_KEY':         JSON.stringify(process.env.HF_API_KEY         || ''),
+    }),
+    
   ],
   // proxy /api to port 4943 during development.
   // if you edit dfx.json to define a project-specific local network, change the port to match.

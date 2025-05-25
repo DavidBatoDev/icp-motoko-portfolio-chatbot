@@ -11,11 +11,15 @@
 const fs = require('fs').promises;
 const crypto = require('crypto');
 const path = require('path');
+// env
+require('dotenv/config')
 
+
+// (EDIT HERE)
 // Configuration - make sure these match your main.js settings
-const HF_API_KEY = "hf_xxxxxxxxxxxxxxxxxxxxxxxxxx"; // Replace with your HF token
-const CHUNK = 1500;
-const OVERLAP = 300;
+const HF_API_KEY = process.env.HF_API_KEY
+const CHUNK = 800;
+const OVERLAP = 200;
 const CV_PATH = path.join(__dirname, "user_cv.txt")
 const EMBEDDINGS_PATH = path.join(__dirname, "embeddings.json")
 const EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5";

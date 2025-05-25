@@ -22,3 +22,7 @@ dist/
 
 # environment variables
 .env
+
+# embeddings
+embeddings.json
+user_cv.txt

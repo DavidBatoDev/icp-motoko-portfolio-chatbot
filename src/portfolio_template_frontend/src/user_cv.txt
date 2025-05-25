@@ -1,0 +1,85 @@
+David E. Bato-bato
+
+(+63) 9944345742 • batobatodavid20@gmail.com • Github • LinkedIn • Portfolio
+
+A motivated and self‑taught developer with 2 years of practical experience in Software Development, eager to
+apply and enhance skills while making meaningful contributions to communities. Skilled in connecting programming
+with tangible real‑world outcomes.
+
+Technical Skills
+Languages
+• HTML, CSS, JavaScript, TypeScript, Python, PHP, C++
+Frameworks, Libraries & Databases
+• React, Vite, Tailwind, Bootstrap, Node, Express, Flask, Laravel, NextJS, Firebase, Firestore,
+  Material UI, ShadCN, SQLAlchemy, Eloquent ORM, WebSockets and Socket.IO, SQL,
+  NoSQL, MySQL, SQLite3, Supabase, MongoDB, Docker, PyTorch, Google Cloud
+Version Control
+• Git and GitHub
+
+Experience
+Software Developer | CCDO  
+ElectrifAI – Manila, National Capital Region  
+October 2024 – Present
+• Developed a comprehensive web and mobile application to monitor household electricity
+  consumption in real time. The web app was built with React and TypeScript, while the mobile
+  app utilized React Native for a consistent cross‑platform UX.
+• Integrated an IoT device powered by ESP32 that collects kWh data and updates real‑time
+  consumption metrics in Supabase.
+
+Software Development Co‑Lead  
+Google Developer Students Club, Polytechnic University of the Philippines – Sta. Mesa, Manila  
+September 2024 – Present
+• Led the web department in implementing the organization’s primary website and backend to
+  automate tasks and improve efficiency.
+• Mentored and guided 300+ students in software development by facilitating discussions,
+  sharing insights, and fostering collaboration.
+
+Full‑Stack Developer  
+PUP ICTO – Sta. Mesa, Manila  
+August 2024 – February 2025
+• Designed and built a fully custom PUP alumni‑portal web application, from initial planning to
+  deployment, ensuring scalability and efficiency.
+• Gained hands‑on experience with PHP, Laravel, MySQL, and GoDaddy CI/CD pipelines.
+
+Education
+Polytechnic University of the Philippines – Sta. Mesa, Manila  
+Bachelor of Science in Computer Engineering  
+August 2023 – Present
+• Consistent President’s Lister  
+• CHED Merit Scholar – HSSP  
+• Member, College of Engineering Student Council (Special Projects & Academic Affairs 2023‑2024)
+
+Projects
+Alertech Technologies  
+(React Native CLI, React, Firebase, ESP32 with DHT22 & MQ‑2 Sensors)
+• Built an integrated fire‑detection and alert system combining a mobile app, web dashboard, and IoT firmware.
+• Implemented Firebase Cloud Messaging for instant alerts to users and fire stations.
+• Designed a responsive React dashboard for real‑time monitoring and emergency response.
+
+IskoChatAI  
+(NextJS, TypeScript, Gemini API, Google Cloud, Custom Search API, Supabase, Zustand, Sentence‑Transformers)
+• Engineered a production‑ready Filipino language chatbot using Retrieval‑Augmented Generation (RAG) to assist
+  students with scholarship opportunities and university admissions.
+• Combined Gemini API with Google Custom Search and multilingual sentence‑transformer embeddings for semantically
+  relevant, context‑aware responses in English and Filipino.
+• Architected a scalable Supabase backend for secure user profiles and persistent chat sessions.
+
+Chat Application with Sentiment Analysis  
+(MongoDB, Express, React, Node.js, Socket.io, Firebase, Hugging Face Transformers)
+• Built a real‑time chat app with authentication, group chats, and image uploads via Firebase storage.
+• Integrated a pretrained transformer model for emotion detection, styling messages by sentiment.
+
+GDG XParky Points Backend  
+(Python Flask, Google Cloud Classroom & Sheets APIs)
+• Developed a RESTful API to automate student participation points, reducing manual tracking by 70%.
+• Integrated Google Classroom to fetch real‑time class data with 99% accuracy.
+• Leveraged Google Sheets as a live database for organisers, cutting processing time from hours to seconds.
+
+Arduino Day PH 2025 Website  
+(NextJS, TypeScript, React, Vercel)
+• Helped develop and deploy the official Arduino Day PH 2025 website on the Arduino Philippines domain.
+
+Certifications
+• AWS Cloud Practitioner Essentials – AWS (March 2025)
+• Generative AI with Large Language Models – DeepLearning.AI (March 2025)
+• Python Programmer Bootcamp – 365 Data Science (2024)
