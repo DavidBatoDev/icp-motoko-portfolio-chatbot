@@ -14,6 +14,7 @@ const path = require('path');
 // env
 require('dotenv/config')
 
+console.log(process.env)
 
 // (EDIT HERE)
 // Configuration - make sure these match your main.js settings
