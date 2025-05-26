@@ -99,7 +99,7 @@ function setupChatFunctionality() {
 }
 
 /**********************************************************************
- * Prompt template - you can add personality to your chat bot  (EDIT HERE)                                            *
+ * (EDIT HERE) Prompt template - you can add personality to your chat bot                                             *
  *********************************************************************/
 function buildPrompt({context, question}){
   return `

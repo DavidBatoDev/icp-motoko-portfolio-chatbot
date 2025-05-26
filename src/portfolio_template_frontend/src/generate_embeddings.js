@@ -16,7 +16,6 @@ require('dotenv/config')
 
 console.log(process.env)
 
-// (EDIT HERE)
 // Configuration - make sure these match your main.js settings
 const HF_API_KEY = process.env.HF_API_KEY
 const CHUNK = 800;
