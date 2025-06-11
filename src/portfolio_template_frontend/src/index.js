@@ -14,26 +14,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.error("Error fetching visitor count:", error);
     }
 
-    // Handle chat button based on embeddings availability
-    handleChatAvailability();
+    // Handle chat button based on CV file availability
+    await handleChatAvailability();
 });
 
-
-// Chatbot functionality with Hugging Face Inference API:
+// Chatbot functionality with Gemini API only
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const HF_API_KEY = process.env.HF_API_KEY; 
-const EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5";
 
-// import embeddings and keys, disable chatbot if not available
-let EMBEDDINGS = require("./embeddings.json");
-try {
-  if (!HF_API_KEY || !GEMINI_API_KEY) {
-      throw new Error("API keys missing – chat disabled");
-  }
-} catch (error) {
-    console.warn("embeddings.json not found. Chat functionality will be disabled.");
-    EMBEDDINGS = null;
-}
+// Check for CV file and API key
+let CV_CONTENT = null;
 
 /**********************************************************************
  *(EDIT HERE) EDIT Basic Information                               *
@@ -46,39 +35,226 @@ const OWNER = {
 };
 
 /**********************************************************************
- * Handle chat availability based on embeddings                      *
+ * Enhanced CV content loading with better validation                 *
  *********************************************************************/
-function handleChatAvailability() {
+async function loadCVContent() {
+    try {
+        let content = null;
+        
+        // Try to read the CV file using the file system API
+        if (typeof window !== 'undefined' && window.fs && window.fs.readFile) {
+            try {
+                content = await window.fs.readFile('user_cv.txt', { encoding: 'utf8' });
+            } catch (fsError) {
+                console.warn("Failed to read CV file with fs API:", fsError);
+                // Don't fall through to fetch - if fs fails, the file doesn't exist
+                throw new Error('CV file not found or inaccessible via file system');
+            }
+        } else {
+            // Fallback: try to fetch the file if fs API isn't available
+            try {
+                const response = await fetch('./user_cv.txt');
+                if (response.ok) {
+                    content = await response.text();
+                } else {
+                    throw new Error(`CV file fetch failed with status: ${response.status}`);
+                }
+            } catch (fetchError) {
+                console.warn("Failed to fetch CV file:", fetchError);
+                throw new Error('CV file not found or inaccessible');
+            }
+        }
+        
+        // Enhanced validation for CV content
+        if (!content) {
+            throw new Error('CV file returned null or undefined content');
+        }
+        
+        // Trim whitespace and check if content is meaningful
+        const trimmedContent = content.trim();
+        if (trimmedContent.length === 0) {
+            throw new Error('CV file is empty or contains only whitespace');
+        }
+        
+        // Additional validation: check for minimal content
+        if (trimmedContent.length < 10) {
+            throw new Error('CV file content is too short (less than 10 characters)');
+        }
+        
+        // NEW: Check if content is HTML instead of CV text
+        const htmlPatterns = [
+            /<!DOCTYPE\s+html/i,
+            /<html[^>]*>/i,
+            /<head[^>]*>/i,
+            /<body[^>]*>/i,
+            /<meta[^>]*>/i,
+            /<link[^>]*>/i,
+            /<script[^>]*>/i,
+            /<style[^>]*>/i
+        ];
+        
+        if (htmlPatterns.some(pattern => pattern.test(trimmedContent))) {
+            throw new Error('CV file appears to contain HTML content instead of CV text');
+        }
+        
+        // Check for excessive HTML tags (more than 3 HTML tags suggests it's HTML content)
+        const htmlTagCount = (trimmedContent.match(/<[^>]+>/g) || []).length;
+        if (htmlTagCount > 3) {
+            throw new Error('CV file contains too many HTML tags - expected plain text CV content');
+        }
+        
+        // Check if content looks like placeholder text
+        const placeholderPatterns = [
+            /^(placeholder|example|sample|template|todo|tbd|fill.*in|add.*here|your.*name|your.*info)/i,
+            /^(\s*\n\s*)*$/,
+            /^[.\-_=\s]*$/
+        ];
+        
+        if (placeholderPatterns.some(pattern => pattern.test(trimmedContent))) {
+            throw new Error('CV file appears to contain placeholder content');
+        }
+        
+        // NEW: Additional check for common non-CV content indicators
+        const nonCvPatterns = [
+            /CV Content:/i,  // Matches your current issue
+            /font-family:/i,
+            /background-image:/i,
+            /margin:/i,
+            /padding:/i,
+            /\.container/i,
+            /\.profile-pic/i
+        ];
+        
+        if (nonCvPatterns.some(pattern => pattern.test(trimmedContent))) {
+            throw new Error('CV file appears to contain non-CV content (possibly HTML/CSS)');
+        }
+        
+        CV_CONTENT = content;
+        console.log("CV content loaded successfully");
+        console.log("First 200 characters of CV:", CV_CONTENT.substring(0, 200) + "...");
+        return true;
+        
+    } catch (error) {
+        console.warn("CV content loading failed:", error.message);
+        CV_CONTENT = null;
+        return false;
+    }
+}
+
+/**********************************************************************
+ * Enhanced chat availability handler with better error messaging    *
+ *********************************************************************/
+async function handleChatAvailability() {
     const chatBtn = document.getElementById("openChat");
     
-    if (!chatBtn) return;
+    if (!chatBtn) {
+        console.warn("Chat button not found in DOM");
+        return;
+    }
     
-    if (!EMBEDDINGS) {
-        // Disable and gray out the chat button
-        chatBtn.disabled = true;
-        chatBtn.style.opacity = "0.5";
-        chatBtn.style.cursor = "not-allowed";
-        chatBtn.style.filter = "grayscale(100%)";
+    let disableReason = null;
+    
+    // Check if API key is available
+    if (!GEMINI_API_KEY || GEMINI_API_KEY.trim() === '') {
+        disableReason = "API key missing or empty";
+    } else {
+        // Try to load CV content
+        const cvLoaded = await loadCVContent();
         
-        // Add click handler to show alert
-        chatBtn.onclick = function(e) {
-            e.preventDefault();
-            alert("Chat is currently unavailable. Please:\n\n1. Add your CV information to user_cv.txt\n2. Run generateEmbeddings.js to create the embeddings file\n\nThis will enable the AI chat functionality.");
-            return false;
-        };
-        
-        // Add tooltip or title
-        chatBtn.title = "Chat unavailable - embeddings.json missing";
-        
-        console.warn("Chat functionality disabled: embeddings.json not found");
+        if (!cvLoaded) {
+            disableReason = "CV file missing, empty, or invalid";
+        }
+    }
+    
+    if (disableReason) {
+        disableChatButton(disableReason);
     } else {
         // Chat is available, set up normal functionality
+        enableChatButton();
         setupChatFunctionality();
     }
 }
 
 /**********************************************************************
- * Setup chat functionality when embeddings are available             *
+ * Enhanced chat button disabling with better UX                     *
+ *********************************************************************/
+function disableChatButton(reason) {
+    const chatBtn = document.getElementById("openChat");
+    
+    if (!chatBtn) return;
+    
+    // Disable and gray out the chat button
+    chatBtn.disabled = true;
+    chatBtn.style.opacity = "0.5";
+    chatBtn.style.cursor = "not-allowed";
+    chatBtn.style.filter = "grayscale(100%)";
+    
+    // Add visual indicator class
+    chatBtn.classList.add('chat-disabled');
+    
+    // NO STATUS MESSAGE - just use tooltip
+    
+    // Enhanced click handler with detailed instructions
+    chatBtn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        let message = "💬 Chat is currently unavailable\n\n";
+        message += "To enable chat functionality, please:\n\n";
+        
+        if (reason.includes("API key")) {
+            message += "🔑 Set your GEMINI_API_KEY environment variable\n";
+            message += "   • Get your API key from Google AI Studio\n";
+            message += "   • Add it to your environment variables\n\n";
+        }
+        
+        if (reason.includes("CV file")) {
+            message += "📄 Fix your CV file (user_cv.txt):\n";
+            message += "   • Make sure the file exists in your project root\n";
+            message += "   • Add your actual CV/resume content\n";
+            message += "   • Ensure it's not empty or placeholder text\n";
+            message += "   • File should contain at least 10 characters\n\n";
+        }
+        
+        message += "Once fixed, refresh the page to enable chat! 🚀";
+        
+        alert(message);
+        return false;
+    };
+    
+    // Enhanced tooltip (this will show on hover instead of the red bar)
+    const tooltipText = `Chat unavailable: ${reason}. Click for details.`;
+    chatBtn.title = tooltipText;
+    chatBtn.setAttribute('aria-label', tooltipText);
+    
+    console.warn(`Chat functionality disabled: ${reason}`);
+}
+
+/**********************************************************************
+ * Enable chat button when requirements are met                      *
+ *********************************************************************/
+function enableChatButton() {
+    const chatBtn = document.getElementById("openChat");
+    
+    if (!chatBtn) return;
+    
+    // Re-enable the chat button
+    chatBtn.disabled = false;
+    chatBtn.style.opacity = "1";
+    chatBtn.style.cursor = "pointer";
+    chatBtn.style.filter = "none";
+    
+    // Remove disabled class
+    chatBtn.classList.remove('chat-disabled');
+    
+    // Reset tooltip
+    chatBtn.title = 'Chat with AI about my background';
+    chatBtn.setAttribute('aria-label', 'Open chat to ask questions about my background');
+    
+    console.log("Chat functionality enabled");
+}
+/**********************************************************************
+ * Setup chat functionality when CV is available                     *
  *********************************************************************/
 function setupChatFunctionality() {
     const chatBtn = document.getElementById("openChat");
@@ -101,49 +277,24 @@ function setupChatFunctionality() {
 /**********************************************************************
  * (EDIT HERE) Prompt template - you can add personality to your chat bot                                             *
  *********************************************************************/
-function buildPrompt({context, question}){
+function buildPrompt({cvContent, question}){
   return `
 You are an AI assistant for ${OWNER.name}'s personal résumé / portfolio site.
-• When the answer is in the provided context, respond politely and make it more informational.  
-• Always refer to ${OWNER.name.split(" ")[0]} with the third-person pronouns "${OWNER.pronoun}/${OWNER.possessive}". 
-• Format your responses using markdown for better readability (use **bold**, *italic*, \`code\`, lists, etc.).
 
-=== CONTEXT START ===
-${context}
-=== CONTEXT END ===
+INSTRUCTIONS:
+• Answer questions about ${OWNER.name.split(" ")[0]} based on the CV information provided below
+• Always refer to ${OWNER.name.split(" ")[0]} with the third-person pronouns "${OWNER.pronoun}/${OWNER.possessive}"
+• Be helpful, professional, and informative
+• If asked about something not in the CV, politely indicate that information isn't available
+• Format your responses using markdown for better readability (use **bold**, *italic*, \`code\`, lists, etc.)
+• Keep responses concise but informative
+
+=== CV INFORMATION START ===
+${cvContent}
+=== CV INFORMATION END ===
 
 Question: ${question}
 Answer:`.trim();
-}
-
-/**********************************************************************
- * Hugging Face Inference API call for embeddings                     *
- *********************************************************************/
-async function getEmbedding(text, isQuery = false) {
-  const prefixedText = isQuery 
-    ? `Represent this query for searching relevant passages: ${text}`
-    : `Represent this document for retrieval: ${text}`;
-
-  const response = await fetch(`https://api-inference.huggingface.co/models/${EMBEDDING_MODEL}`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${HF_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      inputs: prefixedText,
-      options: {
-        wait_for_model: true
-      }
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`HF API error! status: ${response.status}`);
-  }
-
-  const embedding = await response.json();
-  return embedding;
 }
 
 /**********************************************************************
@@ -196,12 +347,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 });
-
-/**********************************************************************
- * 2. Load embeddings from file (only if available)                  *
- *********************************************************************/
-const chunks = EMBEDDINGS ? EMBEDDINGS.chunks : [];
-const vecs   = EMBEDDINGS ? EMBEDDINGS.vectors : [];
 
 /**********************************************************************
  * 3. Enhanced Chat UI with improved typing and markdown              *
@@ -348,94 +493,101 @@ function wrapConsecutiveListItems(container) {
 }
 
 /**********************************************************************
- * Similarity functions for RAG                                      *
- *********************************************************************/
-function dotProduct(a, b) {
-  return a.reduce((sum, val, i) => sum + val * b[i], 0);
-}
-
-function magnitude(vec) {
-  return Math.sqrt(vec.reduce((sum, val) => sum + val * val, 0));
-}
-
-function cosine(a, b) {
-  const dot = dotProduct(a, b);
-  const magA = magnitude(a);
-  const magB = magnitude(b);
-  return dot / (magA * magB);
-}
-
-/**********************************************************************
- * RAG answer pipeline                                               *
+ * Enhanced generate answer with additional validation               *
  *********************************************************************/
 async function generateAnswer(question) {
-  if (!EMBEDDINGS) {
-    throw new Error("Embeddings not available");
-  }
+    // Validate CV content before making API call
+    if (!CV_CONTENT) {
+        const cvLoaded = await loadCVContent();
+        if (!cvLoaded) {
+            throw new Error("CV content not available - file missing or invalid");
+        }
+    }
+    
+    // Additional runtime validation
+    if (CV_CONTENT.trim().length < 10) {
+        throw new Error("CV content is too short or invalid");
+    }
+    
+    // Validate API key
+    if (!GEMINI_API_KEY || GEMINI_API_KEY.trim() === '') {
+        throw new Error("API key not available or empty");
+    }
 
-  // Embed the query using HF API with query prefix
-  const queryEmbedding = await getEmbedding(question, true);
-
-  // Similarity search
-  const topChunks = vecs.map((vector, index) => ({ 
-      index, 
-      score: cosine(vector, queryEmbedding) 
-    }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3)
-    .map(result => chunks[result.index])
-    .join("\n---\n");
-
-  // Generate response using Gemini
-  const context = topChunks;
-  const prompt = buildPrompt({ context, question });
-  const response = await callGeminiAPI(prompt);
-  return response;
+    // Generate response using Gemini with CV content as context
+    const prompt = buildPrompt({ cvContent: CV_CONTENT, question });
+    const response = await callGeminiAPI(prompt);
+    
+    if (!response || response.trim().length === 0) {
+        throw new Error("Empty response from API");
+    }
+    
+    return response;
 }
 
 /**********************************************************************
- * Simplified send function without typing animation                  *
+ * Enhanced send function with additional CV validation              *
  *********************************************************************/
 async function send() {
-  if (!EMBEDDINGS) {
-    alert("Chat is currently unavailable. Please add your CV information to user_cv.txt and run generateEmbeddings.js first.");
-    return;
-  }
+    const input = document.getElementById("userInput");
+    const sendBtn = document.getElementById("sendMessage");
+    const question = input.value.trim();
+    
+    if (!question) return;
+    
+    // Double-check CV content before processing
+    if (!CV_CONTENT) {
+        const cvLoaded = await loadCVContent();
+        if (!cvLoaded) {
+            alert("❌ Chat is currently unavailable.\n\nPlease add your CV information to user_cv.txt file and refresh the page.");
+            return;
+        }
+    }
+    
+    // Additional runtime validation
+    if (CV_CONTENT.trim().length < 10) {
+        alert("❌ CV content appears to be too short or invalid.\n\nPlease check your user_cv.txt file and refresh the page.");
+        return;
+    }
+    
+    // Disable input while processing
+    input.disabled = true;
+    sendBtn.disabled = true;
+    
+    // Add user message
+    addMessage("user", question);
+    input.value = "";
+    
+    // Show typing indicator dots
+    showTypingIndicator();
 
-  const input = document.getElementById("userInput");
-  const sendBtn = document.getElementById("sendMessage");
-  const question = input.value.trim();
-  if (!question) return;
-  
-  // Disable input while processing
-  input.disabled = true;
-  sendBtn.disabled = true;
-  
-  // Add user message
-  addMessage("user", question);
-  input.value = "";
-  
-  // Show typing indicator dots
-  showTypingIndicator();
-
-  try {
-    // Generate response
-    const answer = await generateAnswer(question);
-    
-    // Hide typing indicator
-    hideTypingIndicator();
-    
-    // Add bot message instantly without typing effect
-    addMessage("bot", answer.trim());
-    
-  } catch (error) {
-    console.error("Chat error:", error);
-    hideTypingIndicator();
-    addMessage("bot", "Sorry, I encountered an error. Please try again.");
-  } finally {
-    // Re-enable input
-    input.disabled = false;
-    sendBtn.disabled = false;
-    input.focus();
-  }
+    try {
+        // Generate response
+        const answer = await generateAnswer(question);
+        
+        // Hide typing indicator
+        hideTypingIndicator();
+        
+        // Add bot message
+        addMessage("bot", answer.trim());
+        
+    } catch (error) {
+        console.error("Chat error:", error);
+        hideTypingIndicator();
+        
+        let errorMessage = "❌ Sorry, I encountered an error. Please try again.";
+        
+        if (error.message.includes("CV content") || error.message.includes("not available")) {
+            errorMessage = "❌ Sorry, I couldn't access the CV information.\n\nPlease make sure user_cv.txt exists, contains valid content, and refresh the page.";
+        } else if (error.message.includes("API") || error.message.includes("key")) {
+            errorMessage = "❌ Sorry, there was an API error.\n\nPlease check your GEMINI_API_KEY and try again.";
+        }
+        
+        addMessage("bot", errorMessage);
+    } finally {
+        // Re-enable input
+        input.disabled = false;
+        sendBtn.disabled = false;
+        input.focus();
+    }
 }
